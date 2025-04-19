@@ -39,13 +39,13 @@ npm run node
 
 Set your local private key from provided ones
 
-```
+```bash
 npx hardhat vars set ANVIL_PRIVATE_KEY
 ```
 
 Run the script (it will deploy the contract automatically)
 
-```
+```bash
 npx hardhat commitAndVerifyBlob --blob-count <BLOB_COUNT> --network local
 ```
 
@@ -57,7 +57,7 @@ A verifier contract is already deployed there and used in config. If you to use 
 
 Set your private key, RPC and Etherscan API key
 
-```
+```bash
 npx hardhat vars set HOLESKY_PRIVATE_KEY
 npx hardhat vars set HOLESKY_RPC_URL
 npx hardhat vars set ETHERSCAN_API_KEY
@@ -65,7 +65,7 @@ npx hardhat vars set ETHERSCAN_API_KEY
 
 Deploy and verify the contract
 
-```
+```bash
 npx hardhat ignition deploy ignition/modules/BlobTxDemo.ts --network holesky --verify
 ```
 
@@ -73,6 +73,6 @@ Update config with deployed address in `config/blobTxDemoAddress.json`
 
 Run the script
 
-```
+```bash
 npx hardhat commitAndVerifyBlob --blob-count <BLOB_COUNT> --network holesky
 ```
