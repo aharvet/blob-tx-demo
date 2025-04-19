@@ -1,6 +1,7 @@
 import { task, types } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox-viem";
 import { Blob } from "c-kzg";
+import { Address } from "viem";
 import { createBlobData, prepareBlobVerification } from "./utils/blob";
 import { createClients } from "./utils/client";
 import {
@@ -8,6 +9,7 @@ import {
   sendBlobTransaction,
   decodeEvents,
 } from "./utils/contract";
+import blobTxDemoAddress from "../config/blobTxDemoAddress.json";
 
 task("commitAndVerifyBlob", "Commits and verifies blobs")
   .addParam("blobCount", "Number of blobs to commit and verify", "1", types.int)
@@ -27,23 +29,45 @@ task("commitAndVerifyBlob", "Commits and verifies blobs")
       const blobs: Blob[] = [];
       const blobVerificationData = [];
 
-      // Create blobs
+      // Create blobs and verification data
       for (let i = 0; i < blobCount; i++) {
         const blob = createBlobData(`Mock data for blob ${i}`);
+        console.log(`\nBlob ${i} created: ${blob}`);
         blobs.push(blob);
         const verificationData = await prepareBlobVerification(blob);
+        console.log(`Blob ${i} verification data:`);
+        console.log(JSON.stringify(verificationData, null, 2));
         blobVerificationData.push(verificationData);
       }
 
       const { walletClient, publicClient } = createClients(hre);
 
-      // Deploy contract
-      const contractAddress = await deployContract(
-        walletClient,
-        publicClient,
-        hre
-      );
-      console.log("Contract deployed at:", contractAddress);
+      console.log(`\nUsing account: ${walletClient.account?.address}`);
+
+      let contractAddress: Address;
+      switch (hre.network.name) {
+        // Deploy contract if local network
+        case "anvil":
+          contractAddress = await deployContract(
+            walletClient,
+            publicClient,
+            hre
+          );
+          console.log("Contract deployed at:", contractAddress);
+          break;
+        case "holesky":
+        case "sepolia":
+          contractAddress = blobTxDemoAddress[hre.network.name] as Address;
+          if (!contractAddress) {
+            throw new Error(
+              `Contract address not found for network ${hre.network.name}`
+            );
+          }
+          console.log("Using contract address:", contractAddress);
+          break;
+        default:
+          throw new Error(`Unsupported network: ${hre.network.name}`);
+      }
 
       // Send transaction type 3
       const txHash = await sendBlobTransaction(
@@ -52,7 +76,7 @@ task("commitAndVerifyBlob", "Commits and verifies blobs")
         blobVerificationData,
         blobs
       );
-      console.log("Transaction hash:", txHash);
+      console.log("\nTransaction hash:", txHash);
 
       const txReceipt = await publicClient.waitForTransactionReceipt({
         hash: txHash,
@@ -61,7 +85,7 @@ task("commitAndVerifyBlob", "Commits and verifies blobs")
 
       // Decode events
       const events = decodeEvents(txReceipt.logs);
-      console.log("Decoded events:", events);
+      console.log("\nDecoded events:", events);
     } catch (error) {
       console.error("Error in commitAndVerifyBlob task:", error);
       throw error;

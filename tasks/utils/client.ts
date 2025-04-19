@@ -1,5 +1,5 @@
 import { createWalletClient, http, createPublicClient } from "viem";
-import { anvil, holesky } from "viem/chains";
+import { anvil, holesky, sepolia } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { ClientPair } from "./types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
@@ -19,6 +19,8 @@ export function createClients(hre: HardhatRuntimeEnvironment): ClientPair {
         return anvil;
       case "holesky":
         return holesky;
+      case "sepolia":
+        return sepolia;
       default:
         throw new Error(`Unsupported network: ${hre.network.name}`);
     }
