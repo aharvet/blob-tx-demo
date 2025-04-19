@@ -15,7 +15,7 @@ export function createClients(hre: HardhatRuntimeEnvironment): ClientPair {
 
   const chain = (() => {
     switch (hre.network.name) {
-      case "anvil":
+      case "local":
         return anvil;
       case "holesky":
         return holesky;
@@ -36,6 +36,8 @@ export function createClients(hre: HardhatRuntimeEnvironment): ClientPair {
     chain,
     transport: http(networkConfig.url),
   });
+
+  console.log("Using account:", account.address);
 
   return { walletClient, publicClient };
 }

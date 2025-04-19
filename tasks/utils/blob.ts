@@ -42,6 +42,7 @@ export async function prepareBlobVerification(
   const [proof, y] = computeKzgProof(blob, z);
 
   return {
+    z: bytesToHex(z),
     y: bytesToHex(y),
     commitment: bytesToHex(commitment),
     proof: bytesToHex(proof),

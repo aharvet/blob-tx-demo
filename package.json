@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "node": "anvil --hardfork cancun"
+  },
   "dependencies": {
     "c-kzg": "^4.1.0",
     "hardhat": "^2.23.0"

@@ -3,6 +3,7 @@ import "@nomicfoundation/hardhat-toolbox-viem";
 import { Blob } from "c-kzg";
 import { Address } from "viem";
 import { createBlobData, prepareBlobVerification } from "./utils/blob";
+import { BlobVerificationData } from "./utils/types";
 import { createClients } from "./utils/client";
 import {
   deployContract,
@@ -11,81 +12,84 @@ import {
 } from "./utils/contract";
 import blobTxDemoAddress from "../config/blobTxDemoAddress.json";
 
+const validateBlobCount = (count: number): void => {
+  if (count < 1) throw new Error("Blob count must be at least 1");
+  if (count > 6) throw new Error("Maximum blob count is 6");
+};
+
+const createBlobsAndVerificationData = async (count: number) => {
+  const blobs: Blob[] = [];
+  const verificationData: BlobVerificationData[] = [];
+
+  for (let i = 0; i < count; i++) {
+    const blob = createBlobData(`Mock data for blob ${i}`);
+    console.log(`Blob ${i} content: ${blob}`);
+    blobs.push(blob);
+    const data = await prepareBlobVerification(blob);
+    console.log(
+      `Blob ${i} verification data: ${JSON.stringify(data, null, 2)}`
+    );
+    console.log();
+    verificationData.push(data);
+  }
+
+  return { blobs, verificationData };
+};
+
+const getContractAddress = async (
+  network: string,
+  walletClient: any,
+  publicClient: any,
+  hre: any
+): Promise<Address> => {
+  if (network === "local") {
+    const contractAddress = await deployContract(
+      walletClient,
+      publicClient,
+      hre
+    );
+    console.log("Contract deployed at:", contractAddress);
+    return contractAddress;
+  }
+
+  if (network === "holesky" || network === "sepolia") {
+    const address = blobTxDemoAddress[network] as Address;
+    if (!address)
+      throw new Error(`Contract address not found for network ${network}`);
+    console.log("Using contract address:", address);
+    return address;
+  }
+
+  throw new Error(`Unsupported network: ${network}`);
+};
+
 task("commitAndVerifyBlob", "Commits and verifies blobs")
   .addParam("blobCount", "Number of blobs to commit and verify", "1", types.int)
   .setAction(async (taskArgs, hre) => {
     try {
-      // Check param
-      const blobCount = taskArgs.blobCount;
-      if (blobCount < 1) {
-        console.log("Blob count must be at least 1");
-        process.exit(1);
-      }
-      if (blobCount > 6) {
-        console.log("Warning: Maximum blob count is 6");
-        process.exit(1);
-      }
+      validateBlobCount(taskArgs.blobCount);
 
-      const blobs: Blob[] = [];
-      const blobVerificationData = [];
-
-      // Create blobs and verification data
-      for (let i = 0; i < blobCount; i++) {
-        const blob = createBlobData(`Mock data for blob ${i}`);
-        console.log(`\nBlob ${i} created: ${blob}`);
-        blobs.push(blob);
-        const verificationData = await prepareBlobVerification(blob);
-        console.log(`Blob ${i} verification data:`);
-        console.log(JSON.stringify(verificationData, null, 2));
-        blobVerificationData.push(verificationData);
-      }
-
+      const { blobs, verificationData } = await createBlobsAndVerificationData(
+        taskArgs.blobCount
+      );
       const { walletClient, publicClient } = createClients(hre);
 
-      console.log(`\nUsing account: ${walletClient.account?.address}`);
-
-      let contractAddress: Address;
-      switch (hre.network.name) {
-        // Deploy contract if local network
-        case "anvil":
-          contractAddress = await deployContract(
-            walletClient,
-            publicClient,
-            hre
-          );
-          console.log("Contract deployed at:", contractAddress);
-          break;
-        case "holesky":
-        case "sepolia":
-          contractAddress = blobTxDemoAddress[hre.network.name] as Address;
-          if (!contractAddress) {
-            throw new Error(
-              `Contract address not found for network ${hre.network.name}`
-            );
-          }
-          console.log("Using contract address:", contractAddress);
-          break;
-        default:
-          throw new Error(`Unsupported network: ${hre.network.name}`);
-      }
-
-      // Send transaction type 3
-      const txHash = await sendBlobTransaction(
+      const contractAddress = await getContractAddress(
+        hre.network.name,
         walletClient,
+        publicClient,
+        hre
+      );
+
+      const txReceipt = await sendBlobTransaction(
+        walletClient,
+        publicClient,
         contractAddress,
-        blobVerificationData,
+        verificationData,
         blobs
       );
-      console.log("\nTransaction hash:", txHash);
 
-      const txReceipt = await publicClient.waitForTransactionReceipt({
-        hash: txHash,
-      });
-      console.log("Transaction successful");
-
-      // Decode events
-      const events = decodeEvents(txReceipt.logs);
-      console.log("\nDecoded events:", events);
+      decodeEvents(txReceipt.logs);
     } catch (error) {
       console.error("Error in commitAndVerifyBlob task:", error);
       throw error;

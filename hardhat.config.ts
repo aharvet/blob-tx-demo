@@ -23,7 +23,7 @@ const config: HardhatUserConfig = {
   networks: {
     ...(ANVIL_PRIVATE_KEY
       ? {
-          anvil: {
+          local: {
             url: "http://127.0.0.1:8545",
             accounts: [ANVIL_PRIVATE_KEY],
           },

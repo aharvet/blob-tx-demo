@@ -1,12 +1,12 @@
 import {
   Address,
-  Hash,
   PublicClient,
   WalletClient,
   parseGwei,
   encodeFunctionData,
   SetupKzgParameters,
   decodeEventLog,
+  TransactionReceipt,
 } from "viem";
 import { Blob, blobToKzgCommitment, computeBlobKzgProof } from "c-kzg";
 import { BlobVerificationData } from "./types";
@@ -53,17 +53,18 @@ export function createKzgAdapter(): SetupKzgParameters {
 
 export async function sendBlobTransaction(
   walletClient: WalletClient,
+  publicClient: PublicClient,
   contractAddress: Address,
   blobVerificationData: BlobVerificationData[],
   blobs: Blob[]
-): Promise<Hash> {
+): Promise<TransactionReceipt> {
   if (!walletClient.account) {
     throw new Error("Wallet client must have an account configured");
   }
 
   const kzgAdapter = createKzgAdapter();
 
-  return walletClient.sendTransaction({
+  const txHash = await walletClient.sendTransaction({
     account: walletClient.account,
     chain: null,
     blobs: blobs,
@@ -92,10 +93,19 @@ export async function sendBlobTransaction(
       ],
     }),
   });
+
+  console.log("Transaction hash:", txHash);
+
+  const txReceipt = await publicClient.waitForTransactionReceipt({
+    hash: txHash,
+  });
+  console.log("Transaction successful");
+
+  return txReceipt;
 }
 
 export function decodeEvents(logs: any[]) {
-  return logs
+  const events = logs
     .map((log) => {
       try {
         const eventAbi = [
@@ -120,4 +130,8 @@ export function decodeEvents(logs: any[]) {
       }
     })
     .filter(Boolean);
+
+  console.log("Decoded events:", events);
+
+  return events;
 }
