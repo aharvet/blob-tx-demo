@@ -12,12 +12,12 @@ import {
 } from "./utils/contract";
 import blobTxDemoAddress from "../config/blobTxDemoAddress.json";
 
-const validateBlobCount = (count: number): void => {
+function validateBlobCount(count: number) {
   if (count < 1) throw new Error("Blob count must be at least 1");
   if (count > 6) throw new Error("Maximum blob count is 6");
-};
+}
 
-const createBlobsAndVerificationData = async (count: number) => {
+async function createBlobsAndVerificationData(count: number) {
   const blobs: Blob[] = [];
   const verificationData: BlobVerificationData[] = [];
 
@@ -34,14 +34,14 @@ const createBlobsAndVerificationData = async (count: number) => {
   }
 
   return { blobs, verificationData };
-};
+}
 
-const getContractAddress = async (
+async function getContractAddress(
   network: string,
   walletClient: any,
   publicClient: any,
   hre: any
-): Promise<Address> => {
+): Promise<Address> {
   if (network === "local") {
     const contractAddress = await deployContract(
       walletClient,
@@ -61,7 +61,7 @@ const getContractAddress = async (
   }
 
   throw new Error(`Unsupported network: ${network}`);
-};
+}
 
 task("commitAndVerifyBlob", "Commits and verifies blobs")
   .addParam("blobCount", "Number of blobs to commit and verify", "1", types.int)
